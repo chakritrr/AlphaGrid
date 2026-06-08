@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Settings, LifeBuoy } from 'lucide-react';
+import { Settings, LifeBuoy, LogOut } from 'lucide-react';
+import { useAuth } from './services/AuthContext';
+import LoginPage from './pages/LoginPage';
 import Sidebar from './components/Sidebar';
 import PageDashboard from './pages/Dashboard';
 import PageBots from './pages/Bots';
@@ -9,8 +11,13 @@ import PageSubscription from './pages/Subscription';
 import PagePlaceholder from './pages/Placeholder';
 
 export default function DashboardApp() {
+  const { isAuthenticated, user, logout } = useAuth();
   const [page, setPage] = useState('dashboard');
   const [mobileNav, setMobileNav] = useState(false);
+
+  if (!isAuthenticated) {
+    return <LoginPage onSuccess={() => {}} />;
+  }
 
   const renderPage = () => {
     switch (page) {
@@ -35,7 +42,12 @@ export default function DashboardApp() {
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar current={page} onNav={setPage} mobileOpen={mobileNav} onClose={() => setMobileNav(false)} />
+      <Sidebar
+        current={page}
+        onNav={setPage}
+        mobileOpen={mobileNav}
+        onClose={() => setMobileNav(false)}
+      />
       <main className="flex-1 min-w-0 px-5 sm:px-7 lg:px-9 py-6 lg:py-8 relative">
         <div
           className="absolute top-0 left-0 right-0 h-[420px] pointer-events-none -z-0 opacity-50"
@@ -44,6 +56,13 @@ export default function DashboardApp() {
               'radial-gradient(ellipse at 30% 0%, rgba(0,212,255,0.08), transparent 50%), radial-gradient(ellipse at 80% 0%, rgba(139,92,246,0.08), transparent 60%)',
           }}
         />
+        {/* Top bar with user info */}
+        <div className="flex items-center justify-end gap-3 mb-4 relative z-10">
+          <span className="text-dim text-[12px]">{user?.email}</span>
+          <button onClick={logout} className="btn btn-ghost !p-1.5" title="Logout">
+            <LogOut size={14} color="#FF8A98" />
+          </button>
+        </div>
         <div className="relative max-w-[1480px] mx-auto" key={page}>
           {renderPage()}
         </div>
