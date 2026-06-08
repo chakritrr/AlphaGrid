@@ -6,7 +6,7 @@ import StatCard from '../components/StatCard';
 import BotCard from '../components/BotCard';
 import TradesTable from '../components/TradesTable';
 import { dashboard } from '../services/api';
-import { fmtUSD, computeStats, BOTS, TRADES, PNL_30D } from '../data/mockData';
+import { fmtUSD } from '../data/mockData';
 
 const ChartGrid = () => (
   <CartesianGrid stroke="rgba(255,255,255,0.05)" strokeDasharray="2 4" vertical={false} />
@@ -40,12 +40,7 @@ export default function PageDashboard({ onNav }) {
         setBots(botsRes.bots || []);
         setTrades(tradesRes.trades || []);
       } catch (err) {
-        // Fallback to mock data
-        const s = computeStats();
-        setStats(s);
-        setPnlData(PNL_30D);
-        setBots(BOTS);
-        setTrades(TRADES.slice(0, 5));
+        setError(err.message);
       } finally {
         setLoading(false);
       }
@@ -64,13 +59,25 @@ export default function PageDashboard({ onNav }) {
     );
   }
 
+  if (error) {
+    return (
+      <div className="page-enter">
+        <TopBar title="Welcome back" subtitle="Could not load dashboard" />
+        <div className="glass p-8 text-center">
+          <div className="text-red text-[14px] mb-2">Failed to load data</div>
+          <div className="text-dim text-[12px]">{error}</div>
+        </div>
+      </div>
+    );
+  }
+
   const activeBots = bots.filter((b) => b.status === 'running').slice(0, 3);
 
   return (
     <div className="page-enter">
       <TopBar
-        title="Welcome back, Alex"
-        subtitle="Your trading desk · Markets are open · Last sync 12 seconds ago"
+        title="Welcome back"
+        subtitle="Your trading desk · Markets are open"
         action={
           <button className="btn btn-primary" onClick={() => onNav('bots')}>
             <Plus size={14} color="#001016" /> New Bot
@@ -78,44 +85,13 @@ export default function PageDashboard({ onNav }) {
         }
       />
 
-      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard
-          label="Portfolio Value"
-          value={fmtUSD(stats.portfolioValue)}
-          delta={stats.change30d}
-          deltaLabel="vs 30d ago"
-          accent="#00D4FF"
-          icon={Wallet}
-          sparkData={pnlData.map((d) => ({ value: d.value }))}
-        />
-        <StatCard
-          label="Today's P&L"
-          value={fmtUSD(stats.todayPnl, { sign: true })}
-          delta={(stats.todayPnl / stats.portfolioValue) * 100}
-          deltaLabel="of portfolio"
-          accent={stats.todayPnl >= 0 ? '#00FF88' : '#FF5A6E'}
-          icon={stats.todayPnl >= 0 ? TrendingUp : TrendingDown}
-        />
-        <StatCard
-          label="Active Bots"
-          value={`${stats.activeBots}`}
-          delta={20}
-          deltaLabel="this week"
-          accent="#8B5CF6"
-          icon={Bot}
-        />
-        <StatCard
-          label="Trades This Month"
-          value={stats.monthTrades.toLocaleString()}
-          delta={8.4}
-          deltaLabel="vs last month"
-          accent="#FFC857"
-          icon={Activity}
-        />
+        <StatCard label="Portfolio Value" value={fmtUSD(stats.portfolioValue || 0)} delta={stats.change30d} deltaLabel="vs 30d ago" accent="#00D4FF" icon={Wallet} sparkData={pnlData.map((d) => ({ value: d.value }))} />
+        <StatCard label="Today's P&L" value={fmtUSD(stats.todayPnl || 0, { sign: true })} delta={(stats.todayPnl / (stats.portfolioValue || 1)) * 100} deltaLabel="of portfolio" accent={(stats.todayPnl || 0) >= 0 ? '#00FF88' : '#FF5A6E'} icon={(stats.todayPnl || 0) >= 0 ? TrendingUp : TrendingDown} />
+        <StatCard label="Active Bots" value={`${stats.activeBots || 0}`} delta={20} deltaLabel="this week" accent="#8B5CF6" icon={Bot} />
+        <StatCard label="Trades This Month" value={(stats.monthTrades || 0).toLocaleString()} delta={8.4} deltaLabel="vs last month" accent="#FFC857" icon={Activity} />
       </div>
 
-      {/* Portfolio P&L */}
       <div className="glass p-6 mb-6">
         <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
           <div>
@@ -124,33 +100,22 @@ export default function PageDashboard({ onNav }) {
           </div>
           <div className="flex items-center gap-1.5">
             {['7D', '30D', '90D', '1Y'].map((t, i) => (
-              <button key={t} className="btn !py-1.5 !px-3 text-[11.5px]"
-                style={i === 1 ? { background: 'rgba(0,212,255,0.10)', borderColor: 'rgba(0,212,255,0.30)', color: '#67E5FF' } : {}}>{t}</button>
+              <button key={t} className="btn !py-1.5 !px-3 text-[11.5px]" style={i === 1 ? { background: 'rgba(0,212,255,0.10)', borderColor: 'rgba(0,212,255,0.30)', color: '#67E5FF' } : {}}>{t}</button>
             ))}
           </div>
         </div>
         <div style={{ width: '100%', height: 280 }}>
           <ResponsiveContainer>
             <AreaChart data={pnlData} margin={{ top: 10, right: 12, left: -12, bottom: 0 }}>
-              <defs>
-                <linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#00D4FF" stopOpacity={0.5} />
-                  <stop offset="100%" stopColor="#00D4FF" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <ChartGrid />
-              <ChartAxisX dataKey="date" />
-              <ChartAxisY tickFormatter={(v) => `$${(v / 1000).toFixed(1)}k`} />
-              <Tooltip contentStyle={{ background: 'rgba(14,16,22,0.95)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 10 }}
-                formatter={(v) => [fmtUSD(v), 'Value']}
-                cursor={{ stroke: '#00D4FF', strokeDasharray: '3 3', strokeOpacity: 0.4 }} />
+              <defs><linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#00D4FF" stopOpacity={0.5} /><stop offset="100%" stopColor="#00D4FF" stopOpacity={0} /></linearGradient></defs>
+              <ChartGrid /><ChartAxisX dataKey="date" /><ChartAxisY tickFormatter={(v) => `$${(v / 1000).toFixed(1)}k`} />
+              <Tooltip contentStyle={{ background: 'rgba(14,16,22,0.95)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 10 }} formatter={(v) => [fmtUSD(v), 'Value']} cursor={{ stroke: '#00D4FF', strokeDasharray: '3 3', strokeOpacity: 0.4 }} />
               <Area type="monotone" dataKey="value" stroke="#00D4FF" strokeWidth={2} fill="url(#pnlGrad)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Active bots + Recent trades */}
       <div className="grid lg:grid-cols-3 gap-5 mb-6">
         <div className="lg:col-span-1">
           <div className="flex items-center justify-between mb-3">
@@ -158,16 +123,20 @@ export default function PageDashboard({ onNav }) {
             <button className="text-[12px] text-blue hover:underline" onClick={() => onNav('bots')}>View all →</button>
           </div>
           <div className="flex flex-col gap-3">
-            {activeBots.map((b) => (<BotCard key={b.id} bot={b} compact />))}
+            {activeBots.length > 0 ? activeBots.map((b) => (<BotCard key={b.id} bot={b} compact />)) : (
+              <div className="glass-2 p-4 text-center text-dim text-[12px]">No active bots yet.<br />Create one from My Bots.</div>
+            )}
           </div>
         </div>
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[14px] font-semibold">Recent trades</div>
-            <button className="text-[12px] text-blue hover:underline">View all →</button>
+            <button className="text-[12px] text-blue hover:underline" onClick={() => onNav('performance')}>View all →</button>
           </div>
           <div className="glass p-4">
-            <TradesTable trades={trades} compact />
+            {trades.length > 0 ? <TradesTable trades={trades} compact /> : (
+              <div className="text-center text-dim text-[12px] py-6">No trades yet.</div>
+            )}
           </div>
         </div>
       </div>

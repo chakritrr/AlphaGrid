@@ -85,6 +85,7 @@ func main() {
 		user.GET("/trades", dashHandler.GetTrades)
 		user.GET("/exchanges", dashHandler.GetExchanges)
 		user.POST("/exchanges", dashHandler.ConnectExchange)
+			user.DELETE("/exchanges/:id", dashHandler.DisconnectExchange)
 		user.GET("/performance", dashHandler.GetPerformance)
 		user.GET("/subscription", dashHandler.GetSubscription)
 		user.GET("/subscription/plans", dashHandler.GetPlans)

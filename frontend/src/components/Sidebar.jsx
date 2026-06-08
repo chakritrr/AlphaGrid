@@ -1,8 +1,6 @@
-import { X, Sparkles, Zap } from 'lucide-react';
+import { X, Sparkles, Zap, LogOut } from 'lucide-react';
+import { useAuth } from '../services/AuthContext';
 import { NAV } from '../data/mockData';
-import { LogOut } from 'lucide-react';
-
-// Map icon names to lucide components (dynamic import workaround)
 import {
   LayoutDashboard, Bot, TrendingUp, Plug, Crown, Settings, LifeBuoy,
 } from 'lucide-react';
@@ -18,6 +16,7 @@ const ICON_MAP = {
 };
 
 export default function Sidebar({ current, onNav, mobileOpen, onClose }) {
+  const { user, logout } = useAuth();
   return (
     <>
       {/* mobile overlay */}
@@ -63,7 +62,7 @@ export default function Sidebar({ current, onNav, mobileOpen, onClose }) {
               AK
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-medium truncate">Alex Karpov</div>
+              <div className="text-[13px] font-medium truncate">{user?.name || 'User'}</div>
               <div className="flex items-center gap-1.5">
                 <span
                   className="text-[10px] mono px-1.5 py-[1px] rounded"
@@ -73,9 +72,9 @@ export default function Sidebar({ current, onNav, mobileOpen, onClose }) {
                     border: '1px solid rgba(139,92,246,0.35)',
                   }}
                 >
-                  PRO
+                  {(user?.plan || 'starter').toUpperCase()}
                 </span>
-                <span className="text-[10px] text-dim">5 / 10 bots</span>
+                <span className="text-[10px] text-dim">{user?.botsUsed || 0} / {user?.botsLimit || 2} bots</span>
               </div>
             </div>
           </div>
@@ -109,7 +108,7 @@ export default function Sidebar({ current, onNav, mobileOpen, onClose }) {
                         border: '1px solid rgba(0,255,136,0.30)',
                       }}
                     >
-                      5
+                      {user?.botsUsed || 0}
                     </span>
                   )}
                 </div>
@@ -183,7 +182,7 @@ export default function Sidebar({ current, onNav, mobileOpen, onClose }) {
           className="px-3 pb-4"
           style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 12 }}
         >
-          <div className="nav-item" style={{ color: '#FF8A98' }}>
+          <div className="nav-item" style={{ color: '#FF8A98' }} onClick={logout}>
             <LogOut size={16} color="#FF8A98" />
             <span>Log out</span>
           </div>

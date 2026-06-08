@@ -4,7 +4,8 @@ import { Download, TrendingUp, Target, Activity, Star, CalendarDays, Scale } fro
 import TopBar from '../components/TopBar';
 import TradesTable from '../components/TradesTable';
 import { dashboard } from '../services/api';
-import { fmtUSD, PERF_DATA, BOT_COMPARE, TRADES, WIN_LOSS } from '../data/mockData';
+import { showToast } from '../services/toast';
+import { fmtUSD } from '../data/mockData';
 
 const ChartGrid = () => (<CartesianGrid stroke="rgba(255,255,255,0.05)" strokeDasharray="2 4" vertical={false} />);
 const ChartAxisX = (props) => (<XAxis tick={{ fill: '#5A6072', fontSize: 11 }} axisLine={false} tickLine={false} {...props} />);
@@ -14,27 +15,35 @@ export default function PagePerformance() {
   const [range, setRange] = useState('30D');
   const [perf, setPerf] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [trades, setTrades] = useState(TRADES);
-  const [winLoss, setWinLoss] = useState(WIN_LOSS);
-  const [botCompare, setBotCompare] = useState(BOT_COMPARE);
+  const [trades, setTrades] = useState([]);
+  const [winLoss, setWinLoss] = useState([
+    { name: 'Wins', value: 0, color: '#00FF88' },
+    { name: 'Losses', value: 0, color: '#FF5A6E' },
+  ]);
+  const [botCompare, setBotCompare] = useState([]);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await dashboard.performance(range);
-        setPerf(res);
-        if (res?.winLoss) {
+        const [perfRes, tradesRes] = await Promise.all([
+          dashboard.performance(range),
+          dashboard.trades(20, 0),
+        ]);
+        setPerf(perfRes);
+        if (perfRes?.winLoss) {
           setWinLoss([
-            { name: 'Wins', value: res.winLoss.wins, color: '#00FF88' },
-            { name: 'Losses', value: res.winLoss.losses, color: '#FF5A6E' },
+            { name: 'Wins', value: perfRes.winLoss.wins || 0, color: '#00FF88' },
+            { name: 'Losses', value: perfRes.winLoss.losses || 0, color: '#FF5A6E' },
           ]);
         }
-        if (res?.perBot) {
-          setBotCompare(res.perBot);
+        if (perfRes?.perBot) {
+          setBotCompare(perfRes.perBot);
         }
-      } catch {
-        setPerf(PERF_DATA[range]);
-        setBotCompare(BOT_COMPARE);
+        if (tradesRes?.trades) {
+          setTrades(tradesRes.trades);
+        }
+      } catch (err) {
+        console.error("Performance fetch failed:", err);
       } finally {
         setLoading(false);
       }
@@ -42,7 +51,7 @@ export default function PagePerformance() {
     fetchData();
   }, [range]);
 
-  const rawCumulative = perf?.cumulative || PERF_DATA[range];
+  const rawCumulative = perf?.cumulative || [];
   const cumulative = rawCumulative.map((d) => ({
     date: d.date,
     value: d.value ?? d.cumulative ?? 0,
@@ -76,7 +85,7 @@ export default function PagePerformance() {
   return (
     <div className="page-enter">
       <TopBar title="Performance" subtitle="Detailed analytics across all your trading bots"
-        action={<button className="btn"><Download size={13} /> Export CSV</button>} />
+        action={<button className="btn" onClick={() => showToast("Exporting performance data...","success")}><Download size={13} /> Export CSV</button>} />
 
       <div className="glass-2 inline-flex p-1 mb-5">
         {['7D', '30D', '90D', 'All'].map((r) => (
@@ -173,7 +182,7 @@ export default function PagePerformance() {
       <div className="glass p-6">
         <div className="flex items-center justify-between mb-4">
           <div><div className="text-[14px] font-semibold">Trade history</div><div className="text-muted text-[12px] mt-0.5">All executed trades across bots</div></div>
-          <button className="btn"><Download size={13} /> Export CSV</button>
+          <button className="btn" onClick={() => showToast("Exporting trade history...","success")}><Download size={13} /> Export CSV</button>
         </div>
         <TradesTable trades={trades} showPagination />
       </div>

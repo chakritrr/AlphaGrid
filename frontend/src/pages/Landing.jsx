@@ -133,7 +133,7 @@ export default function LandingPage() {
             <Link to="/app" className="btn !py-1.5 !px-3 text-[12px]">
               Sign in
             </Link>
-            <Link to="/app" className="btn btn-primary !py-1.5 !px-3 text-[12px]">
+            <Link to="/app?mode=register" className="btn btn-primary !py-1.5 !px-3 text-[12px]">
               Start free
             </Link>
             <button className="md:hidden btn-ghost btn !p-2" onClick={() => setMobileOpen(!mobileOpen)}>
@@ -171,7 +171,7 @@ export default function LandingPage() {
                 and let the bots do the work. Pause anytime.
               </p>
               <div className="flex flex-wrap gap-3 mt-8">
-                <Link to="/app" className="btn btn-primary !py-3 !px-6 text-[14px]">
+                <Link to="/app?mode=register" className="btn btn-primary !py-3 !px-6 text-[14px]">
                   <Zap size={16} color="#001016" /> Start free trial
                 </Link>
                 <a href="#pricing" className="btn !py-3 !px-6 text-[14px]">
@@ -381,7 +381,7 @@ export default function LandingPage() {
                 ))}
               </div>
               <Link
-                to="/app"
+                to={tier.popular ? "/app?mode=register" : "/app"}
                 className={`btn w-full justify-center ${tier.popular ? 'btn-primary' : ''}`}
               >
                 {tier.popular ? 'Start 14-day trial' : 'Choose ' + tier.name}
@@ -455,7 +455,7 @@ export default function LandingPage() {
               <span className="text-accent">Sleep through the dip.</span>
             </h2>
             <div className="flex flex-wrap justify-center gap-3 mt-8">
-              <Link to="/app" className="btn btn-primary !py-3 !px-8 text-[14px]">
+              <Link to="/app?mode=register" className="btn btn-primary !py-3 !px-8 text-[14px]">
                 <Zap size={16} color="#001016" /> Start free trial
               </Link>
               <Link to="/app" className="btn !py-3 !px-8 text-[14px]">

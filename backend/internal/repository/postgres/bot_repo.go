@@ -3,7 +3,6 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
@@ -155,50 +154,45 @@ func (r *BotRepo) ListAll(filter domain.BotFilter) ([]domain.Bot, int, error) {
 }
 
 func (r *BotRepo) GetPerformance(userID, rangeType string) (*domain.PerformanceResponse, error) {
-	days := 30
-	switch rangeType {
-	case "7d", "7D":
-		days = 7
-	case "90d", "90D":
-		days = 90
-	case "All":
-		days = 180
-	default:
-		days = 30
-	}
-
 	resp := &domain.PerformanceResponse{
 		Range: rangeType,
-		Metrics: domain.PerfMetrics{TotalProfit: 8420.21, WinRate: 74.9, TotalTrades: 849,
-			BestDay: 1284.90, AvgDailyProfit: 280.67, ProfitFactor: 2.18},
-		WinLoss: domain.WinLossData{Wins: 287, Losses: 96},
+		Metrics: domain.PerfMetrics{TotalProfit: 0, WinRate: 0, TotalTrades: 0,
+			BestDay: 0, AvgDailyProfit: 0, ProfitFactor: 0},
+		WinLoss: domain.WinLossData{Wins: 0, Losses: 0},
 	}
 
-	// Cumulative
-	var cumulative []domain.PnLSeries
-	val := 0.0
-	for i := days - 1; i >= 0; i-- {
-		d := time.Now().AddDate(0, 0, -i)
-		drift := math.Sin(float64(i)/4)*90 + (float64(i) * 20)
-		val += drift
-		cumulative = append(cumulative, domain.PnLSeries{
-			Date:  d.Format("Jan 2"),
-			Value: val,
-			PnL:   drift,
-		})
-	}
-	resp.Cumulative = cumulative
-
-	// Per bot
+	// Per bot — real data from DB only
 	bots, err := r.FindByUserID(userID)
 	if err != nil {
 		return nil, err
 	}
+	var totalPnL float64
+	var totalTrades int
 	for _, b := range bots {
+		totalPnL += b.TotalPnl
+		totalTrades += b.Trades
 		resp.PerBot = append(resp.PerBot, domain.BotPnL{
 			Name: b.Name,
 			PnL:  b.TotalPnl,
 		})
+	}
+	resp.Metrics.TotalProfit = totalPnL
+	resp.Metrics.TotalTrades = totalTrades
+	if len(bots) > 0 {
+		var wins, losses int
+		for _, b := range bots {
+			if b.WinRate > 50 {
+				wins++
+			} else {
+				losses++
+			}
+		}
+		resp.WinLoss = domain.WinLossData{Wins: wins, Losses: losses}
+		var avgWinRate float64
+		for _, b := range bots {
+			avgWinRate += b.WinRate
+		}
+		resp.Metrics.WinRate = avgWinRate / float64(len(bots))
 	}
 	return resp, nil
 }

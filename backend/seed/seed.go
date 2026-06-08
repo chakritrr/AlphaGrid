@@ -83,6 +83,19 @@ func (s *Seeder) Seed() error {
 	s.db.Exec(`INSERT INTO payment_history (user_id, plan_id, amount, status, paid_at)
 		VALUES ($1, $2, $3, $4, $5)`, userID, "starter", 29.00, "paid", time.Now().AddDate(0, -3, 0))
 
+	// Exchange connections for demo user
+	exchanges := []struct{ name, apiKey, secret string; balance float64 }{
+		{"Binance", "bnq_bin_key_abc123", "sk_bin_secret_xyz", 12480.42},
+		{"OKX", "bnq_okx_key_def456", "sk_okx_secret_uvw", 6210.18},
+		{"Bybit", "bnq_bybit_key_ghi789", "sk_bybit_secret_rst", 3104.50},
+	}
+	for _, ex := range exchanges {
+		s.db.Exec(`INSERT INTO exchange_connections (user_id, exchange_name, api_key_encrypted, secret_key_encrypted, permissions, status, balance, last_sync_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			userID, ex.name, ex.apiKey, ex.secret,
+			`{"read":true,"trade":true,"withdraw":false}`, "connected", ex.balance, time.Now().Add(-2*time.Minute))
+	}
+
 	// Bots for demo user
 	botNames := []struct {
 		name     string

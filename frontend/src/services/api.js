@@ -93,6 +93,10 @@ export async function patch(path, body) {
   return request('PATCH', path, body);
 }
 
+export async function del(path) {
+  return request('DELETE', path);
+}
+
 // ── User Dashboard API ──
 
 export const dashboard = {
@@ -104,6 +108,7 @@ export const dashboard = {
   trades: (limit = 10, offset = 0) => get(`/api/v1/trades?limit=${limit}&offset=${offset}`),
   exchanges: () => get('/api/v1/exchanges'),
   connectExchange: (data) => post('/api/v1/exchanges', data),
+  disconnectExchange: (id) => del(`/api/v1/exchanges/${id}`),
   performance: (range = '30d') => get(`/api/v1/performance?range=${range}`),
   subscription: () => get('/api/v1/subscription'),
   plans: () => get('/api/v1/subscription/plans'),

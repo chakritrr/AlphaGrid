@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { StatusPill } from '../components/ui';
 import { admin } from '../../services/api';
+import { showToast } from '../../services/toast';
 
 export default function AlertsView() {
   const [tab, setTab] = useState('All');

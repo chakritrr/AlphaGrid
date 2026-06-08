@@ -3,6 +3,7 @@ import { Wallet, Users, Bot, Sparkles } from 'lucide-react';
 import { ComposedChart, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { KPI, SectionHead, Seg, StatusPill } from '../components/ui';
 import { admin } from '../../services/api';
+import { showToast } from '../../services/toast';
 import { fmtUSD, fmtNum } from '../data';
 
 export default function OverviewView({ push }) {

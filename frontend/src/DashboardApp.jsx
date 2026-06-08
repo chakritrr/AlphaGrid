@@ -16,7 +16,8 @@ export default function DashboardApp() {
   const [mobileNav, setMobileNav] = useState(false);
 
   if (!isAuthenticated) {
-    return <LoginPage onSuccess={() => {}} />;
+    const params = new URLSearchParams(window.location.search);
+    return <LoginPage mode={params.get('mode') || 'login'} onSuccess={() => {}} />;
   }
 
   const renderPage = () => {

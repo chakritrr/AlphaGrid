@@ -3,8 +3,16 @@ import { fmtUSD } from '../data/mockData';
 import ExchangeLogo from './ExchangeLogo';
 import { StatusBadge, StrategyBadge } from './StatusBadge';
 import Progress from './Progress';
+import { showToast } from '../services/toast';
 
 export default function BotCard({ bot, compact = false, onToggle, onDetails }) {
+  const handleDetails = () => {
+    if (onDetails) { onDetails(bot); return; }
+    showToast(`${bot.name}: +${bot.todayPnl >= 0 ? '' : ''}${fmtUSD(bot.todayPnl, { sign: true })} today · ${bot.winRate}% win rate`, 'info');
+  };
+  const handleEdit = () => {
+    showToast(`Editing ${bot.name} — coming soon`, 'info');
+  };
   const positive = bot.todayPnl >= 0;
   return (
     <div className="glass lift p-5 relative overflow-hidden flex flex-col">
@@ -109,10 +117,10 @@ export default function BotCard({ bot, compact = false, onToggle, onDetails }) {
             {bot.status === 'running' ? <Pause size={13} /> : <Play size={13} />}
             {bot.status === 'running' ? 'Pause' : 'Start'}
           </button>
-          <button className="btn !px-3" title="Edit">
+          <button className="btn !px-3" title="Edit" onClick={handleEdit}>
             <Settings2 size={14} />
           </button>
-          <button className="btn !px-3" title="Details" onClick={() => onDetails?.(bot)}>
+          <button className="btn !px-3" title="Details" onClick={handleDetails}>
             <ArrowUpRight size={14} />
           </button>
         </div>

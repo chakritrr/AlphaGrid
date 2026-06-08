@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/chakritrr/AlphaGrid/backend/internal/domain"
 	"github.com/chakritrr/AlphaGrid/backend/internal/dto/response"
+	apperrors "github.com/chakritrr/AlphaGrid/backend/internal/pkg/errors"
 	"github.com/chakritrr/AlphaGrid/backend/internal/usecase"
 )
 
@@ -149,6 +150,22 @@ func (h *DashboardHandler) ConnectExchange(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, conn)
+}
+
+func (h *DashboardHandler) DisconnectExchange(c *gin.Context) {
+	userID := c.GetString("userId")
+	id := c.Param("id")
+	if err := h.exchangeUsecase.Disconnect(userID, id); err != nil {
+		status := http.StatusInternalServerError
+		msg := "Failed to disconnect exchange"
+		if appErr, ok := err.(*apperrors.AppError); ok {
+			status = appErr.Status
+			msg = appErr.Message
+		}
+		c.JSON(status, gin.H{"error": gin.H{"code": "ERROR", "message": msg}})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Exchange disconnected"})
 }
 
 func (h *DashboardHandler) GetPerformance(c *gin.Context) {

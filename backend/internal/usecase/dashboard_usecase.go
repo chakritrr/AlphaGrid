@@ -1,16 +1,13 @@
 package usecase
 
 import (
-	"math"
-	"time"
-
 	"github.com/chakritrr/AlphaGrid/backend/internal/domain"
 	"github.com/chakritrr/AlphaGrid/backend/internal/repository"
 )
 
 type DashboardUsecase struct {
-	botRepo  repository.BotRepository
-	tradeRepo repository.TradeRepository
+	botRepo       repository.BotRepository
+	tradeRepo     repository.TradeRepository
 	analyticsRepo repository.AnalyticsRepository
 }
 
@@ -20,8 +17,8 @@ func NewDashboardUsecase(
 	analyticsRepo repository.AnalyticsRepository,
 ) *DashboardUsecase {
 	return &DashboardUsecase{
-		botRepo:  botRepo,
-		tradeRepo: tradeRepo,
+		botRepo:       botRepo,
+		tradeRepo:     tradeRepo,
 		analyticsRepo: analyticsRepo,
 	}
 }
@@ -32,61 +29,19 @@ func (uc *DashboardUsecase) GetStats(userID string) (*domain.DashboardStats, err
 		return nil, err
 	}
 
-	// Generate mock portfolio value (same seeding pattern as frontend)
-	val := 24800.0
-	for i := 29; i >= 0; i-- {
-		drift := math.Sin(float64(i)/3)*220 + (float64(i%7) * 50)
-		val += drift
-	}
-	start := 24800.0
-	for i := 29; i >= 0; i-- {
-		drift := math.Sin(float64(i)/3)*220 + (float64(i%7) * 50)
-		val += drift
-		_ = start
-	}
-	change := ((val - start) / start) * 100
-	todayPnl := math.Sin(29.0/3)*220 + float64(29%7)*50
-
+	// Return real data only. No synthetic mock data.
 	return &domain.DashboardStats{
-		PortfolioValue: math.Round(val),
-		Change30d:      math.Round(change*100) / 100,
-		TodayPnl:       math.Round(todayPnl*100) / 100,
+		PortfolioValue: 0,
+		Change30d:      0,
+		TodayPnl:       0,
 		ActiveBots:     activeBots,
 		MonthTrades:    monthTrades,
 	}, nil
 }
 
 func (uc *DashboardUsecase) GetPnL(userID string, rangeType string) (*domain.PnLSeries, []domain.PnLSeries, error) {
-	days := 30
-	switch rangeType {
-	case "7d", "7D":
-		days = 7
-	case "90d", "90D":
-		days = 90
-	case "1y", "1Y":
-		days = 365
-	}
-
-	var portfolioValue float64
-	var series []domain.PnLSeries
-	val := 24800.0
-	for i := days - 1; i >= 0; i-- {
-		d := time.Now().AddDate(0, 0, -i)
-		drift := math.Sin(float64(i)/3)*220 + (float64(i%7) * 50)
-		val += drift
-		series = append(series, domain.PnLSeries{
-			Date:  d.Format("Jan 2"),
-			Value: math.Round(val),
-			PnL:   math.Round(drift),
-		})
-	}
-	portfolioValue = val
-
-	result := &domain.PnLSeries{
-		Date:  rangeType,
-		Value: portfolioValue,
-	}
-	return result, series, nil
+	// Return empty series. No synthetic data.
+	return &domain.PnLSeries{}, []domain.PnLSeries{}, nil
 }
 
 func (uc *DashboardUsecase) GetBots(userID string) ([]domain.Bot, error) {
@@ -95,18 +50,16 @@ func (uc *DashboardUsecase) GetBots(userID string) ([]domain.Bot, error) {
 
 func (uc *DashboardUsecase) CreateBot(userID string, req *domain.BotCreateRequest) (*domain.Bot, error) {
 	bot := &domain.Bot{
-		UserID:   userID,
-		Name:     req.Strategy + " Bot",
-		Strategy: req.Strategy,
-		Exchange: req.Exchange,
-		Pair:     req.Pair,
-		Status:   "running",
-		Invested: req.Investment,
-		RiskLevel: map[int]string{
-			0: "low", 1: "low", 2: "medium", 3: "medium", 4: "high", 5: "high",
-		}[req.Risk/20],
-		Leverage: 1,
-		AUM:      req.Investment,
+		UserID:    userID,
+		Name:      req.Strategy + " Bot",
+		Strategy:  req.Strategy,
+		Exchange:  req.Exchange,
+		Pair:      req.Pair,
+		Status:    "running",
+		Invested:  req.Investment,
+		RiskLevel: map[int]string{0: "low", 1: "low", 2: "medium", 3: "medium", 4: "high", 5: "high"}[req.Risk/20],
+		Leverage:  1,
+		AUM:       req.Investment,
 	}
 	if bot.RiskLevel == "" {
 		bot.RiskLevel = "medium"
