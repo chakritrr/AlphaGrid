@@ -1,31 +1,336 @@
 @import "tailwindcss";
 
-@theme {
-  --font-sans: Inter, system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+/* ============================================================
+   BinQuant — Trading Bot Dashboard Theme
+   Inspired by Claude Design export
+   ============================================================ */
 
-  --color-surface: #0d0d0f;
-  --color-surface-2: #131315;
-  --color-surface-3: #1a1a1e;
-  --color-surface-hover: #1f1f24;
-  --color-border: #2a2a30;
-  --color-border-light: #373740;
-  --color-text-primary: #e8e8ed;
-  --color-text-secondary: #9ca3af;
-  --color-text-tertiary: #6b7280;
-  --color-accent: #818cf8;
-  --color-accent-hover: #6d78f7;
-  --color-accent-bg: rgba(129, 140, 248, 0.1);
-  --color-success: #34d399;
-  --color-success-bg: rgba(52, 211, 153, 0.1);
-  --color-danger: #f87171;
+@theme {
+  --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Background layers */
+  --color-bg: #0A0B0F;
+  --color-bg-2: #0E1016;
+  --color-card: #12141A;
+  --color-card-2: #161922;
+
+  /* Borders */
+  --color-line: rgba(255, 255, 255, 0.06);
+  --color-line-2: rgba(255, 255, 255, 0.10);
+
+  /* Text */
+  --color-text: #E7EAF2;
+  --color-muted: #8A90A2;
+  --color-dim: #5A6072;
+
+  /* Accent colors */
+  --color-accent: #00D4FF;
+  --color-green: #00FF88;
+  --color-purple: #8B5CF6;
+  --color-red: #FF5A6E;
+  --color-yellow: #FFC857;
 }
+
+/* ============================================================
+   Base styles
+   ============================================================ */
+html, body, #root { height: 100%; }
 
 body {
   margin: 0;
-  background: var(--color-surface);
-  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  color: var(--color-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01", "cv11";
 }
+
+/* Mono / numeral utility classes */
+.mono { font-family: var(--font-mono); font-feature-settings: "tnum", "zero"; }
+.num { font-family: var(--font-mono); font-feature-settings: "tnum", "zero"; letter-spacing: -0.01em; }
+
+/* ============================================================
+   Glass cards
+   ============================================================ */
+.glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.005)), var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  backdrop-filter: blur(8px);
+}
+
+.glass-2 {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.005)), var(--color-card-2);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+}
+
+.hairline { border: 1px solid var(--color-line); }
+.hairline-strong { border: 1px solid var(--color-line-2); }
+
+/* ============================================================
+   Glows
+   ============================================================ */
+.glow-blue { box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.25), 0 8px 40px -12px rgba(0, 212, 255, 0.45); }
+.glow-green { box-shadow: 0 0 0 1px rgba(0, 255, 136, 0.25), 0 8px 40px -12px rgba(0, 255, 136, 0.45); }
+.glow-purple { box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.30), 0 8px 40px -12px rgba(139, 92, 246, 0.45); }
+
+/* ============================================================
+   Animations
+   ============================================================ */
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.92); }
+}
+.pulse-dot { animation: pulseDot 1.6s ease-in-out infinite; }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.5), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2.4s linear infinite;
+}
+
+/* Page transition */
+@keyframes fadeUp {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.page-enter { animation: fadeUp 280ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+
+/* ============================================================
+   Aurora background
+   ============================================================ */
+.aurora {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
+}
+.aurora::before, .aurora::after {
+  content: ""; position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.35;
+}
+.aurora::before {
+  width: 520px; height: 520px;
+  background: radial-gradient(circle, rgba(0, 212, 255, 0.45), transparent 60%);
+  top: -160px; left: -120px;
+}
+.aurora::after {
+  width: 460px; height: 460px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.45), transparent 60%);
+  top: 80px; right: -160px;
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 14px; border-radius: 10px; font-weight: 500; font-size: 13px;
+  transition: all 160ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  border: 1px solid var(--color-line-2);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.btn:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.16); }
+.btn-primary {
+  background: linear-gradient(180deg, #00E1FF, #00B6DB);
+  color: #001016; border: 1px solid rgba(0, 212, 255, 0.5);
+  box-shadow: 0 6px 24px -8px rgba(0, 212, 255, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.btn-primary:hover { filter: brightness(1.05); }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost:hover { background: rgba(255, 255, 255, 0.05); }
+.btn-danger {
+  background: rgba(255, 90, 110, 0.10); border: 1px solid rgba(255, 90, 110, 0.35); color: #FF8A98;
+}
+.btn-danger:hover { background: rgba(255, 90, 110, 0.18); }
+
+/* ============================================================
+   Status badges
+   ============================================================ */
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 500;
+  border: 1px solid var(--color-line-2);
+}
+.badge-running { background: rgba(0, 255, 136, 0.10); color: #5BFFB0; border-color: rgba(0, 255, 136, 0.30); }
+.badge-paused { background: rgba(255, 200, 87, 0.10); color: var(--color-yellow); border-color: rgba(255, 200, 87, 0.30); }
+.badge-error { background: rgba(255, 90, 110, 0.10); color: #FF8A98; border-color: rgba(255, 90, 110, 0.30); }
+.badge-blue { background: rgba(0, 212, 255, 0.10); color: #67E5FF; border-color: rgba(0, 212, 255, 0.30); }
+.badge-purple { background: rgba(139, 92, 246, 0.12); color: #B7A2FF; border-color: rgba(139, 92, 246, 0.35); }
+.badge-soft { background: rgba(255, 255, 255, 0.04); color: var(--color-muted); }
+
+/* ============================================================
+   Inputs
+   ============================================================ */
+.input {
+  width: 100%; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--color-line-2);
+  border-radius: 10px; padding: 10px 12px; color: var(--color-text); font-size: 13px;
+  transition: border 160ms ease, background 160ms ease;
+  outline: none;
+}
+.input:focus { border-color: rgba(0, 212, 255, 0.5); background: rgba(0, 212, 255, 0.04); }
+.label { font-size: 11px; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; display: block; font-weight: 500; }
+
+/* ============================================================
+   Sidebar navigation
+   ============================================================ */
+.nav-item {
+  display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 10px;
+  color: var(--color-muted); font-size: 13.5px; font-weight: 500; cursor: pointer;
+  transition: all 140ms ease; position: relative;
+}
+.nav-item:hover { color: var(--color-text); background: rgba(255, 255, 255, 0.04); }
+.nav-item.active {
+  color: var(--color-text);
+  background: rgba(0, 212, 255, 0.06);
+  border: 1px solid rgba(0, 212, 255, 0.20);
+}
+.nav-item.active::before {
+  content: ""; position: absolute; left: -10px; top: 8px; bottom: 8px;
+  width: 2px; border-radius: 2px; background: var(--color-accent);
+  box-shadow: 0 0 12px var(--color-accent);
+}
+
+/* ============================================================
+   Modal
+   ============================================================ */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(5, 7, 12, 0.65); backdrop-filter: blur(8px);
+  z-index: 80; display: flex; align-items: flex-start; justify-content: center; padding: 60px 24px;
+  animation: fadeUp 200ms ease;
+}
+.modal {
+  width: 100%; max-width: 720px; background: var(--color-card); border: 1px solid var(--color-line-2);
+  border-radius: 18px; box-shadow: 0 30px 80px -10px rgba(0, 0, 0, 0.7);
+  animation: fadeUp 280ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* ============================================================
+   Range slider
+   ============================================================ */
+input[type=range] { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); outline: none; }
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--color-accent); border: 2px solid #001016; cursor: pointer;
+  box-shadow: 0 0 0 4px rgba(0, 212, 255, 0.18), 0 0 12px rgba(0, 212, 255, 0.4);
+}
+
+/* ============================================================
+   Toggle switch
+   ============================================================ */
+.toggle {
+  position: relative; width: 36px; height: 20px;
+  background: rgba(255, 255, 255, 0.08); border-radius: 999px; cursor: pointer;
+  transition: background 160ms ease; flex-shrink: 0;
+}
+.toggle::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  transition: all 160ms ease;
+}
+.toggle.on { background: rgba(0, 212, 255, 0.5); }
+.toggle.on::after { left: 18px; background: var(--color-accent); box-shadow: 0 0 10px var(--color-accent); }
+
+/* ============================================================
+   Misc utilities
+   ============================================================ */
+.logo-mark {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: conic-gradient(from 220deg, #00D4FF, #8B5CF6, #00FF88, #00D4FF);
+  position: relative; box-shadow: 0 6px 20px -6px rgba(0, 212, 255, 0.5); flex-shrink: 0;
+}
+.logo-mark::after {
+  content: ""; position: absolute; inset: 4px; border-radius: 5px; background: #0A0B0F;
+}
+.logo-mark::before {
+  content: ""; position: absolute; inset: 9px; border-radius: 2px;
+  background: linear-gradient(135deg, #00D4FF, #8B5CF6);
+  z-index: 2;
+}
+
+.lift { transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease; }
+.lift:hover { transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.14); }
+
+/* ---- Admin panel theme ---- */
+:root {
+  --bg: #07090d;
+  --panel: #0d1015;
+  --panel-2: #11151c;
+  --line: #1a1f29;
+  --line-2: #232936;
+  --ink: #e7ecf3;
+  --ink-2: #9aa3b2;
+  --ink-3: #5b6473;
+  --acc: #b6ff3c;
+  --acc-2: #6ee7ff;
+  --pos: #34d399;
+  --neg: #fb5d6f;
+  --warn: #f5b754;
+}
+
+/* Admin utility classes used in admin panel */
+.admin-panel .panel { background: var(--panel); border: 1px solid var(--line); }
+.admin-panel .panel-2 { background: var(--panel-2); border: 1px solid var(--line); }
+.admin-panel .chip { border: 1px solid var(--line-2); background: #0b0e13; }
+.admin-panel .vsep { background: linear-gradient(to bottom, transparent, var(--line-2), transparent); width: 1px; }
+.admin-panel .hsep { background: linear-gradient(to right, transparent, var(--line-2), transparent); height: 1px; }
+.admin-panel tr.row:hover { background: rgba(255,255,255,.02); }
+.admin-panel .recharts-text { fill: var(--ink-3) !important; font-size: 11px; font-family: 'JetBrains Mono', monospace; }
+.admin-panel .recharts-cartesian-axis-line { stroke: var(--line) !important; }
+.admin-panel .recharts-cartesian-axis-tick-line { stroke: var(--line) !important; }
+.admin-panel .recharts-cartesian-grid line { stroke: var(--line) !important; }
+
+/* Override the .nav-item.active to use lime accent in admin */
+.admin-panel .nav-item.active::before {
+  background: var(--acc);
+  box-shadow: 0 0 12px rgba(182,255,60,.6);
+}
+
+/* Ticker animation */
+@keyframes tick {
+  from { transform: translateX(0); }
+  to { transform: translateX(-33.333%); }
+}
+
+/* Stepper connector lines */
+.step-line { height: 2px; flex: 1; background: linear-gradient(90deg, var(--color-line-2), var(--color-line)); }
+.step-line.active { background: linear-gradient(90deg, var(--color-accent), rgba(0, 212, 255, 0.2)); }
+
+/* Hide on mobile */
+@media (max-width: 1023px) {
+  .desktop-only { display: none !important; }
+}
+@media (min-width: 1024px) {
+  .mobile-only { display: none !important; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.06); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.12); }
+
+/* Recharts tooltip overrides */
+.recharts-default-tooltip {
+  background: rgba(14, 16, 22, 0.95) !important;
+  border: 1px solid var(--color-line-2) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 30px -8px rgba(0, 0, 0, 0.6) !important;
+}
+.recharts-tooltip-label { color: var(--color-muted) !important; font-size: 11px !important; }
+.recharts-tooltip-item { color: var(--color-text) !important; font-size: 12px !important; }
+
+/* Color utilities */
+.text-blue { color: var(--color-accent); }
+.text-green { color: var(--color-green); }
+.text-purple { color: var(--color-purple); }
+.text-red { color: var(--color-red); }
+.text-muted { color: var(--color-muted); }
+.text-dim { color: var(--color-dim); }
