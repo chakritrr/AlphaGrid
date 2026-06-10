@@ -72,15 +72,29 @@ func (h *AdminHandler) ListUsers(c *gin.Context) {
 		return
 	}
 
+	// Get plan pricing for accurate revenue calculation
+	plans, err := h.adminUsecase.GetPlanPricing()
+	if err != nil {
+		plans = nil // fall back to 0 revenue
+	}
+
 	var result []response.AdminUser
 	for _, u := range users {
+		// Look up the price for this user's plan
+		var price float64
+		for _, p := range plans {
+			if p.Name == u.Plan {
+				price = p.Price
+				break
+			}
+		}
 		result = append(result, response.AdminUser{
 			ID:      u.ID,
 			Name:    u.Name,
 			Email:   u.Email,
 			Plan:    u.Plan,
 			Bots:    u.BotsUsed,
-			Rev:     int(u.BotsUsed * 79),
+			Rev:     int(price), // Use actual plan price (per user, not per bot)
 			Status:  u.Status,
 			Joined:  u.CreatedAt.Format("2006-01-02"),
 			Country: u.Country,

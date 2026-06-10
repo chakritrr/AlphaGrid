@@ -3,10 +3,75 @@ package middleware
 import (
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/chakritrr/AlphaGrid/backend/internal/pkg/jwt"
+	"golang.org/x/time/rate"
 )
+
+// perIPRateLimiter is a simple in-memory per-IP rate limiter with TTL eviction.
+type perIPRateLimiter struct {
+	mu       sync.Mutex
+	limiters map[string]*rate.Limiter
+	lastSeen map[string]time.Time
+	ttl      time.Duration
+}
+
+func newPerIPRateLimiter() *perIPRateLimiter {
+	return &perIPRateLimiter{
+		limiters: make(map[string]*rate.Limiter),
+		lastSeen: make(map[string]time.Time),
+		ttl:      10 * time.Minute,
+	}
+}
+
+func (l *perIPRateLimiter) Allow(ip string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	// Evict stale entries
+	now := time.Now()
+	for ip, last := range l.lastSeen {
+		if now.Sub(last) > l.ttl {
+			delete(l.limiters, ip)
+			delete(l.lastSeen, ip)
+		}
+	}
+
+	limiter, exists := l.limiters[ip]
+	if !exists {
+		limiter = rate.NewLimiter(rate.Every(2*time.Second), 3)
+		l.limiters[ip] = limiter
+	}
+	l.lastSeen[ip] = now
+
+	if !limiter.Allow() {
+		return false
+	}
+	return true
+}
+
+var authLimiter = newPerIPRateLimiter()
+
+// RateLimitAuth limits auth endpoints (login/register) per IP.
+func RateLimitAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ip := c.ClientIP()
+		if !authLimiter.Allow(ip) {
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"error": gin.H{
+					"code":    "RATE_LIMIT_EXCEEDED",
+					"message": "Too many requests. Please try again later.",
+				},
+			})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
 
 func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {

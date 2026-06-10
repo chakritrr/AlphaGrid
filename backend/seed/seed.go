@@ -2,10 +2,13 @@ package seed
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"math"
+	"os"
 	"time"
 
+	"github.com/chakritrr/AlphaGrid/backend/internal/pkg/crypto"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -28,21 +31,44 @@ func (s *Seeder) Seed() error {
 
 	log.Println("Seeding database...")
 
+	// Admin credentials from env vars (or use safe defaults for dev only)
+	adminEmail := getEnv("SEED_ADMIN_EMAIL", "admin@binquant.io")
+	adminPassword := getEnv("SEED_ADMIN_PASSWORD", "")
+	if adminPassword == "" {
+		log.Println("WARNING: SEED_ADMIN_PASSWORD not set, using insecure default (dev only!)")
+		adminPassword = "admin123" // fallback for dev, should NEVER be used in production
+	}
+	adminName := getEnv("SEED_ADMIN_NAME", "Sasha Kowal")
 	// Admin user
 	adminID := uuid.New().String()
-	adminHash, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
-	s.db.Exec(`INSERT INTO users (id, name, email, password_hash, role, plan, status, bots_used, bots_limit, country)
+	adminHash, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash admin password: %w", err)
+	}
+	_, err = s.db.Exec(`INSERT INTO users (id, name, email, password_hash, role, plan, status, bots_used, bots_limit, country)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-		adminID, "Sasha Kowal", "admin@binquant.io", string(adminHash),
+		adminID, adminName, adminEmail, string(adminHash),
 		"admin", "elite", "active", 0, 999, "US")
+	if err != nil {
+		return fmt.Errorf("failed to insert admin user: %w", err)
+	}
 
-	// Demo user
+	// Demo user credentials from env vars
+	demoEmail := getEnv("SEED_DEMO_EMAIL", "alex@example.com")
+	demoPassword := getEnv("SEED_DEMO_PASSWORD", "user123")
+	demoName := getEnv("SEED_DEMO_NAME", "Alex Karpov")
 	userID := uuid.New().String()
-	userHash, _ := bcrypt.GenerateFromPassword([]byte("user123"), bcrypt.DefaultCost)
-	s.db.Exec(`INSERT INTO users (id, name, email, password_hash, role, plan, status, bots_used, bots_limit, country)
+	userHash, err := bcrypt.GenerateFromPassword([]byte(demoPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash demo password: %w", err)
+	}
+	_, err = s.db.Exec(`INSERT INTO users (id, name, email, password_hash, role, plan, status, bots_used, bots_limit, country)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-		userID, "Alex Karpov", "alex@example.com", string(userHash),
+		userID, demoName, demoEmail, string(userHash),
 		"user", "pro", "active", 5, 10, "US")
+	if err != nil {
+		return fmt.Errorf("failed to insert demo user: %w", err)
+	}
 
 	// Mock users for admin panel
 	firstNames := []string{"Maya", "Idris", "Vera", "Kenji", "Lior", "Ana", "Theo", "Priya", "Mateo", "Yuki", "Noor", "Eli", "Hana", "Omar", "Iris"}
@@ -62,38 +88,62 @@ func (s *Seeder) Seed() error {
 		if botsUsed == 0 {
 			botsUsed = 1
 		}
-		hash, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
-		s.db.Exec(`INSERT INTO users (id, name, email, password_hash, role, plan, status, bots_used, bots_limit, country)
+		seedPassword := getEnv("SEED_DEFAULT_PASSWORD", "password")
+		hash, err := bcrypt.GenerateFromPassword([]byte(seedPassword), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("failed to hash seed password: %w", err)
+		}
+		_, err = s.db.Exec(`INSERT INTO users (id, name, email, password_hash, role, plan, status, bots_used, bots_limit, country)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 			id, fn+" "+ln, fn+"."+ln+"@email.com", string(hash),
 			"user", plan, status, botsUsed, limits,
 			[]string{"US", "DE", "SG", "BR", "UK", "JP"}[i%6])
+		if err != nil {
+			return fmt.Errorf("failed to insert mock user %d: %w", i, err)
+		}
 	}
 
 	// Subscription for demo user
-	s.db.Exec(`INSERT INTO subscriptions (user_id, plan_id, status, current_period_start, current_period_end)
+	if _, err := s.db.Exec(`INSERT INTO subscriptions (user_id, plan_id, status, current_period_start, current_period_end)
 		VALUES ($1, $2, $3, $4, $5)`,
-		userID, "pro", "active", time.Now().AddDate(0, -1, 0), time.Now().AddDate(0, 1, 0))
+		userID, "pro", "active", time.Now().AddDate(0, -1, 0), time.Now().AddDate(0, 1, 0)); err != nil {
+		return fmt.Errorf("failed to insert subscription: %w", err)
+	}
 
 	// Payment history
-	s.db.Exec(`INSERT INTO payment_history (user_id, plan_id, amount, status, paid_at)
-		VALUES ($1, $2, $3, $4, $5)`, userID, "pro", 79.00, "paid", time.Now().AddDate(0, -1, 0))
-	s.db.Exec(`INSERT INTO payment_history (user_id, plan_id, amount, status, paid_at)
-		VALUES ($1, $2, $3, $4, $5)`, userID, "pro", 79.00, "paid", time.Now().AddDate(0, -2, 0))
-	s.db.Exec(`INSERT INTO payment_history (user_id, plan_id, amount, status, paid_at)
-		VALUES ($1, $2, $3, $4, $5)`, userID, "starter", 29.00, "paid", time.Now().AddDate(0, -3, 0))
+	payments := [][]interface{}{
+		{userID, "pro", 79.00, "paid", time.Now().AddDate(0, -1, 0)},
+		{userID, "pro", 79.00, "paid", time.Now().AddDate(0, -2, 0)},
+		{userID, "starter", 29.00, "paid", time.Now().AddDate(0, -3, 0)},
+	}
+	for _, p := range payments {
+		if _, err := s.db.Exec(`INSERT INTO payment_history (user_id, plan_id, amount, status, paid_at)
+			VALUES ($1, $2, $3, $4, $5)`, p...); err != nil {
+			return fmt.Errorf("failed to insert payment: %w", err)
+		}
+	}
 
-	// Exchange connections for demo user
+	// Exchange connections for demo user (encrypt keys to match production format)
 	exchanges := []struct{ name, apiKey, secret string; balance float64 }{
-		{"Binance", "bnq_bin_key_abc123", "sk_bin_secret_xyz", 12480.42},
-		{"OKX", "bnq_okx_key_def456", "sk_okx_secret_uvw", 6210.18},
-		{"Bybit", "bnq_bybit_key_ghi789", "sk_bybit_secret_rst", 3104.50},
+		{"Binance", "bnq_bin_key_abc123", "***", 12480.42},
+		{"OKX", "bnq_okx_key_def456", "***", 6210.18},
+		{"Bybit", "bnq_bybit_key_ghi789", "sk_byb..._rst", 3104.50},
 	}
 	for _, ex := range exchanges {
-		s.db.Exec(`INSERT INTO exchange_connections (user_id, exchange_name, api_key_encrypted, secret_key_encrypted, permissions, status, balance, last_sync_at)
+		encKey, err := crypto.Encrypt(ex.apiKey)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt exchange API key for %s: %w", ex.name, err)
+		}
+		encSecret, err := crypto.Encrypt(ex.secret)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt exchange secret key for %s: %w", ex.name, err)
+		}
+		if _, err := s.db.Exec(`INSERT INTO exchange_connections (user_id, exchange_name, api_key_encrypted, secret_key_encrypted, permissions, status, balance, last_sync_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			userID, ex.name, ex.apiKey, ex.secret,
-			`{"read":true,"trade":true,"withdraw":false}`, "connected", ex.balance, time.Now().Add(-2*time.Minute))
+			userID, ex.name, encKey, encSecret,
+			`{"read":true,"trade":true,"withdraw":false}`, "connected", ex.balance, time.Now().Add(-2*time.Minute)); err != nil {
+			return fmt.Errorf("failed to insert exchange connection %s: %w", ex.name, err)
+		}
 	}
 
 	// Bots for demo user
@@ -120,11 +170,13 @@ func (s *Seeder) Seed() error {
 	for i := range botNames {
 		botID := uuid.New().String()
 		b := botNames[i]
-		s.db.Exec(`INSERT INTO bots (id, user_id, name, strategy, exchange, pair, status,
+		if _, err := s.db.Exec(`INSERT INTO bots (id, user_id, name, strategy, exchange, pair, status,
 			today_pnl, total_pnl, win_rate, trades_count, invested, risk_level, aum)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
 			botID, userID, b.name, b.strategy, b.exchange, b.pair, statuses_bot[i],
-			pnls[i], totalPnls[i], winRates[i], trades[i], invested[i], b.risk, invested[i])
+			pnls[i], totalPnls[i], winRates[i], trades[i], invested[i], b.risk, invested[i]); err != nil {
+			return fmt.Errorf("failed to insert bot %s: %w", b.name, err)
+		}
 	}
 
 	// Trades for demo user
@@ -139,9 +191,11 @@ func (s *Seeder) Seed() error {
 		if pnl < 0 {
 			status = "loss"
 		}
-		s.db.Exec(`INSERT INTO trades (bot_id, user_id, pair, side, entry_price, exit_price, quantity, pnl, duration, status, created_at)
+		if _, err := s.db.Exec(`INSERT INTO trades (bot_id, user_id, pair, side, entry_price, exit_price, quantity, pnl, duration, status, created_at)
 			VALUES ((SELECT id FROM bots LIMIT 1), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-			userID, pair, side, 71240.50+float64(i*100), 71398.80+float64(i*100), 0.042, pnl, "15m", status, t)
+			userID, pair, side, 71240.50+float64(i*100), 71398.80+float64(i*100), 0.042, pnl, "15m", status, t); err != nil {
+			return fmt.Errorf("failed to insert trade %d: %w", i, err)
+		}
 	}
 
 	// Alerts
@@ -160,10 +214,20 @@ func (s *Seeder) Seed() error {
 	}
 	for _, a := range alerts {
 		t := time.Now().Add(-time.Duration(a.hoursAgo) * time.Hour)
-		s.db.Exec(`INSERT INTO alerts (severity, kind, title, detail, acknowledged, created_at)
-			VALUES ($1, $2, $3, $4, $5, $6)`, a.sev, a.kind, a.title, a.detail, a.ack, t)
+		if _, err := s.db.Exec(`INSERT INTO alerts (severity, kind, title, detail, acknowledged, created_at)
+			VALUES ($1, $2, $3, $4, $5, $6)`, a.sev, a.kind, a.title, a.detail, a.ack, t); err != nil {
+			return fmt.Errorf("failed to insert alert %q: %w", a.title, err)
+		}
 	}
 
 	log.Println("Seed data inserted successfully")
 	return nil
+}
+
+// getEnv returns the env var value or fallback.
+func getEnv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
 }

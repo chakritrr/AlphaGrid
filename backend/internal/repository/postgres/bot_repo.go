@@ -131,12 +131,15 @@ func (r *BotRepo) ListAll(filter domain.BotFilter) ([]domain.Bot, int, error) {
 	countQ := fmt.Sprintf("SELECT COUNT(*) FROM bots WHERE %s", strings.Join(where, " AND"))
 	r.db.QueryRow(countQ, args...).Scan(&total)
 
+	// Use $N placeholders for LIMIT/OFFSET to avoid SQL injection
+	limitArg := idx
+	offsetArg := idx + 1
 	query := fmt.Sprintf(`SELECT id, user_id, name, strategy, exchange, pair, status,
 		today_pnl, total_pnl, win_rate, trades_count, invested, risk_level, leverage, aum, uptime_hours, created_at, updated_at
-		FROM bots WHERE %s ORDER BY created_at DESC LIMIT %d OFFSET %d`,
-		strings.Join(where, " AND"), filter.PerPage, offset)
+		FROM bots WHERE %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d`,
+		strings.Join(where, " AND"), limitArg, offsetArg)
 
-	rows, err := r.db.Query(query, args...)
+	rows, err := r.db.Query(query, append(args, filter.PerPage, offset)...)
 	if err != nil {
 		return nil, 0, err
 	}

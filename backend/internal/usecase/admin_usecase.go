@@ -73,6 +73,10 @@ func (uc *AdminUsecase) GetPlanBreakdown() ([]domain.PlanBreakdown, error) {
 	return uc.subRepo.GetPlanBreakdown()
 }
 
+func (uc *AdminUsecase) GetPlanPricing() ([]domain.Plan, error) {
+	return uc.subRepo.GetPlans()
+}
+
 func (uc *AdminUsecase) GetRenewals() ([]domain.Renewal, error) {
 	return uc.subRepo.GetRenewals()
 }

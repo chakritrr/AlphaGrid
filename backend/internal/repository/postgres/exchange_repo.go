@@ -23,7 +23,7 @@ func (r *ExchangeRepo) Create(conn *domain.ExchangeConnection) error {
 }
 
 func (r *ExchangeRepo) FindByUserID(userID string) ([]domain.ExchangeConnection, error) {
-	rows, err := r.db.Query(`SELECT id, user_id, exchange_name, '', '', permissions::text, status, balance, last_sync_at, created_at
+	rows, err := r.db.Query(`SELECT id, user_id, exchange_name, api_key_encrypted, secret_key_encrypted, permissions::text, status, balance, last_sync_at, created_at
 		FROM exchange_connections WHERE user_id=$1 ORDER BY created_at`, userID)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (r *ExchangeRepo) FindByUserID(userID string) ([]domain.ExchangeConnection,
 func (r *ExchangeRepo) FindByID(id string) (*domain.ExchangeConnection, error) {
 	c := &domain.ExchangeConnection{}
 	var lastSync sql.NullTime
-	query := `SELECT id, user_id, exchange_name, '', '', permissions::text, status, balance, last_sync_at, created_at
+	query := `SELECT id, user_id, exchange_name, api_key_encrypted, secret_key_encrypted, permissions::text, status, balance, last_sync_at, created_at
 		FROM exchange_connections WHERE id=$1`
 	err := r.db.QueryRow(query, id).Scan(&c.ID, &c.UserID, &c.ExchangeName, &c.APIKeyEncrypted,
 		&c.SecretKeyEncrypted, &c.Permissions, &c.Status, &c.Balance, &lastSync, &c.CreatedAt)

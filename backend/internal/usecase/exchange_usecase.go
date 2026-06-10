@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"github.com/chakritrr/AlphaGrid/backend/internal/domain"
+	"github.com/chakritrr/AlphaGrid/backend/internal/pkg/crypto"
 	"github.com/chakritrr/AlphaGrid/backend/internal/repository"
 	apperrors "github.com/chakritrr/AlphaGrid/backend/internal/pkg/errors"
 )
@@ -44,14 +45,24 @@ func (uc *ExchangeUsecase) Disconnect(userID, exchangeID string) error {
 }
 
 func (uc *ExchangeUsecase) Connect(userID string, req *domain.ExchangeConnectRequest) (*domain.ExchangeConnection, error) {
+	// Actually encrypt the API keys before storing
+	encAPIKey, err := crypto.Encrypt(req.APIKey)
+	if err != nil {
+		return nil, apperrors.NewValidationError("Failed to encrypt API key")
+	}
+	encSecretKey, err := crypto.Encrypt(req.SecretKey)
+	if err != nil {
+		return nil, apperrors.NewValidationError("Failed to encrypt secret key")
+	}
+
 	conn := &domain.ExchangeConnection{
 		UserID:             userID,
 		ExchangeName:       req.Exchange,
-		APIKeyEncrypted:    req.APIKey,
-		SecretKeyEncrypted: req.SecretKey,
+		APIKeyEncrypted:    encAPIKey,
+		SecretKeyEncrypted: encSecretKey,
 		Permissions:        `{"read":true,"trade":false,"withdraw":false}`,
 		Status:             "connected",
-		Balance:            8420.91,
+		Balance:            0, // Start at 0; balance is fetched from exchange API after connection
 	}
 	if err := uc.exchangeRepo.Create(conn); err != nil {
 		return nil, err

@@ -70,8 +70,12 @@ func main() {
 	})
 
 	// Public
-	r.POST("/api/v1/auth/register", authHandler.Register)
-	r.POST("/api/v1/auth/login", authHandler.Login)
+	authGroup := r.Group("/api/v1/auth")
+	authGroup.Use(middleware.RateLimitAuth())
+	{
+		authGroup.POST("/register", authHandler.Register)
+		authGroup.POST("/login", authHandler.Login)
+	}
 
 	// User API (JWT required)
 	user := r.Group("/api/v1")

@@ -94,11 +94,20 @@ func (r *UserRepo) List(filter domain.UserFilter) ([]domain.User, int, error) {
 
 	orderBy := "created_at DESC"
 	if filter.Sort != "" {
-		dir := "DESC"
-		if filter.Order == "asc" {
-			dir = "ASC"
+		// Whitelist allowed sort columns to prevent SQL injection
+		allowedSort := map[string]string{
+			"name":     "name",
+			"email":    "email",
+			"plan":     "plan",
+			"status":   "status",
+			"created_at": "created_at",
 		}
-		orderBy = fmt.Sprintf("%s %s", filter.Sort, dir)
+		if col, ok := allowedSort[filter.Sort]; ok {
+			orderBy = col + " DESC"
+			if filter.Order == "asc" {
+				orderBy = col + " ASC"
+			}
+		}
 	}
 
 	page := filter.Page
@@ -114,12 +123,15 @@ func (r *UserRepo) List(filter domain.UserFilter) ([]domain.User, int, error) {
 		return nil, 0, err
 	}
 
+	// Use $N placeholders for LIMIT/OFFSET to avoid SQL injection
+	limitArg := idx
+	offsetArg := idx + 1
 	query := fmt.Sprintf(`SELECT id, name, email, COALESCE(password_hash,''), role, plan, status,
 		bots_used, bots_limit, COALESCE(avatar_url,''), COALESCE(country,''), created_at, updated_at
-		FROM users WHERE %s ORDER BY %s LIMIT %d OFFSET %d`,
-		strings.Join(where, " AND "), orderBy, perPage, offset)
+		FROM users WHERE %s ORDER BY %s LIMIT $%d OFFSET $%d`,
+		strings.Join(where, " AND "), orderBy, limitArg, offsetArg)
 
-	rows, err := r.db.Query(query, args...)
+	rows, err := r.db.Query(query, append(args, perPage, offset)...)
 	if err != nil {
 		return nil, 0, err
 	}
